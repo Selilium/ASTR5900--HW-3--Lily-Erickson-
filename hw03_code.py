@@ -14,7 +14,8 @@ Using the same number of steps for each method.
 import numpy as np
 import matplotlib.pyplot as plt
 
-# PROBLEM 1(A) CODE SCRIPT: 
+#================= PROBLEM 1(A) =======================================
+
 # ----------------------------
 # ODE definition
 # dy/dx = f(x, y)
@@ -118,8 +119,7 @@ def problem1a(x0=0.0, y0=0.0, x_end=1.3, N=100, prefix="problem1a"):
     return xE, yE, yR, yT
 
 
-
-# PROBLEM 1(B) CODE SCRIPT: 
+#================= PROBLEM 1(B) =======================================
 def problem1b(x0=0.0, y0=0.0, x_end=1.55, N=500, rel_thresh=0.01, prefix="problem1b"):
     """
     Part (b): Identify where numerical solution begins to break down.
@@ -206,12 +206,100 @@ def problem1b(x0=0.0, y0=0.0, x_end=1.55, N=500, rel_thresh=0.01, prefix="proble
 
 
 
-if __name__ == "__main__":
-    # ---- Problem 1(a) ----
-    problem1a(N=100)
+#================= PROBLEM 1(C) =======================================
+def problem1c(x0=0.0, y0=0.0, x_end=1.3,
+              N_list=(25, 50, 100, 200, 400, 800),
+              prefix="problem1c"):
+    """
+    Part (c): Convergence study.
+    Show that decreasing step size h increases accuracy.
+    Compare how error decreases for Euler vs RK4.
+    Saves:
+      - <prefix>_error_vs_h.png
+      - <prefix>_convergence_table.txt
+    """
 
-    # ---- Problem 1(b) ----
-    problem1b(x_end=1.55, N=500, rel_thresh=0.01)
+    # Exact endpoint value
+    yT_end = np.tan(x_end)
+
+    rows = []
+    rows.append("N, h, y_exact(x_end), y_Euler(x_end), abs_err_E, y_RK4(x_end), abs_err_RK4\n")
+
+    h_vals = []
+    err_E = []
+    err_R = []
+
+    for N in N_list:
+        xE, yE = euler_method(f, x0, y0, x_end, N)
+        xR, yR = rk4_method(f, x0, y0, x_end, N)
+
+        h = (x_end - x0) / N
+        eE = abs(yE[-1] - yT_end)
+        eR = abs(yR[-1] - yT_end)
+
+        h_vals.append(h)
+        err_E.append(eE)
+        err_R.append(eR)
+
+        rows.append(f"{N}, {h:.8f}, {yT_end:.10f}, {yE[-1]:.10f}, {eE:.6e}, {yR[-1]:.10f}, {eR:.6e}\n")
+
+    # Save table
+    table_path = f"{prefix}_convergence_table.txt"
+    with open(table_path, "w") as fout:
+        fout.writelines(rows)
+
+    # Plot error vs h on log-log scale
+    plt.figure()
+    plt.loglog(h_vals, err_E, marker="o", label="Euler: |error at x_end|")
+    plt.loglog(h_vals, err_R, marker="o", label="RK4: |error at x_end|")
+    plt.gca().invert_xaxis()  # optional: smaller h to the right feels intuitive to some people
+    plt.xlabel("Step size h")
+    plt.ylabel(r"Absolute error at $x_{\mathrm{end}}$")
+    plt.title("Problem 1(c): Convergence (error vs step size)")
+    plt.legend()
+    plt.tight_layout()
+    fig_path = f"{prefix}_error_vs_h.png"
+    plt.savefig(fig_path, dpi=200)
+    plt.close()
+
+    # Quick terminal summary
+    print(f"[1(c)] Saved: {fig_path} and {table_path}")
+    print("      (Expect Euler error ~ O(h), RK4 error ~ O(h^4) until round-off dominates.)")
+
+    return np.array(h_vals), np.array(err_E), np.array(err_R)
+
+
+
+#================= PROBLEM 1(D) =======================================
+
+
+
+
+#================= PROBLEM 1(E) =======================================
+
+
+
+
+if __name__ == "__main__":
+
+    # ----- Problem 1(a) -----
+    run_part_a = False
+    if run_part_a:
+        problem1a(N=100)
+
+    # ----- Problem 1(b) -----
+    run_part_b = False
+    if run_part_b:
+        problem1b(x_end=1.55, N=500, rel_thresh=0.01)
+
+    # ----- Problem 1(c) -----
+    run_part_c = True
+    if run_part_c:
+        problem1c(x_end=1.3, N_list=(25, 50, 100, 200, 400, 800))
+
+    # ---- Problem 1(d) ----
+    # ---- Problem 1(e) ----
+
 
 
  
