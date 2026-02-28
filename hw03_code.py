@@ -342,11 +342,228 @@ def problem1d(x0=0.0, y0=0.0, x_end=1.3,
     return np.array(h_list), np.array(frac_E), np.array(frac_R)
 
 
+# ============================================================================
+# Problem 2: Maxwell-Boltzmann
+# ============================================================================
+
+# Physical constants (SI)
+kB = 1.380649e-23          # J/K
+eV = 1.602176634e-19       # J
+mH = 1.6735575e-27         # kg (hydrogen atom mass ~ proton mass)
+T_star = 1.0e4             # K
+
+# Hydrogen excitation energy n=1 -> n=2
+dE_12 = 10.2 * eV          # J
+
+def mb_speed_pdf(v, T=T_star, m=mH):
+    """
+    Maxwell-Boltzmann speed probability density f(v) for speeds (not velocity components):
+    f(v) = 4*pi * (m/(2*pi*kT))^(3/2) * v^2 * exp(-m v^2 / (2 k T))
+    Units: 1/(m/s) so that integral over dv gives dimensionless probability.
+    """
+    pref = 4.0 * np.pi * (m / (2.0 * np.pi * kB * T))**1.5
+    return pref * v**2 * np.exp(-m * v**2 / (2.0 * kB * T))
+
+# ----------------------------
+# Numerical integrator 
+# Composite Simpson's rule (with trapezoid fallback)
+# ----------------------------
+def integrate_simpson(func, a, b, N, **kwargs):
+    """
+    Composite Simpson's rule on [a,b] with N subintervals (N must be even).
+    Returns approximate integral of func(v, **kwargs) dv.
+    """
+    if N < 2:
+        raise ValueError("N must be >= 2")
+    if N % 2 == 1:
+        N += 1  # make it even
+
+    h = (b - a) / N
+    x = a + h * np.arange(N + 1)
+    y = func(x, **kwargs)
+
+    S = y[0] + y[-1] + 4.0 * np.sum(y[1:-1:2]) + 2.0 * np.sum(y[2:-2:2])
+    return (h / 3.0) * S
 
 
-#================= PROBLEM 1(E) =======================================
+def integrate_trap(func, a, b, N, **kwargs):
+    """
+    Composite trapezoid rule on [a,b] with N subintervals.
+    """
+    h = (b - a) / N
+    x = a + h * np.arange(N + 1)
+    y = func(x, **kwargs)
+    return h * (0.5*y[0] + np.sum(y[1:-1]) + 0.5*y[-1])
 
 
+def v_min_excitation(m=mH, dE=dE_12):
+    """
+    Minimum speed such that (1/2) m v^2 >= dE.
+    """
+    return np.sqrt(2.0 * dE / m)
+
+#================= PROBLEM 1(A) =======================================
+def problem2a(prefix="problem2a", T=T_star, m=mH):
+    """
+    (a) Plot MB speed distribution for hydrogen at T=10,000 K.
+    Saves: figures/problem2a_mb_pdf.png
+    """
+    # characteristic speeds
+    v_mp = np.sqrt(2.0 * kB * T / m)         # most probable speed
+    v_rms = np.sqrt(3.0 * kB * T / m)        # rms speed
+    v_mean = np.sqrt(8.0 * kB * T / (np.pi * m))  # mean speed
+
+    v = np.linspace(0.0, 8.0*v_rms, 2000)
+    f = mb_speed_pdf(v, T=T, m=m)
+
+    plt.figure()
+    plt.plot(v/1000.0, f, label=r"$f(v)$ for H at $T=10^4$ K")
+    plt.axvline(v_mp/1000.0, linestyle="--", label=r"$v_{\rm mp}$")
+    plt.axvline(v_mean/1000.0, linestyle="--", label=r"$\langle v\rangle$")
+    plt.axvline(v_rms/1000.0, linestyle="--", label=r"$v_{\rm rms}$")
+    plt.xlabel("Speed v (km/s)")
+    plt.ylabel(r"Probability density $f(v)$ [s/m]")
+    plt.title("Problem 2(a): Maxwell–Boltzmann Speed Distribution (Hydrogen)")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"figures/{prefix}_mb_pdf.png", dpi=200)
+    plt.close()
+
+    print(f"[2(a)] Saved: figures/{prefix}_mb_pdf.png")
+    print(f"      v_mp={v_mp/1000:.2f} km/s, v_mean={v_mean/1000:.2f} km/s, v_rms={v_rms/1000:.2f} km/s")
+
+    return v_mp, v_mean, v_rms
+
+
+def fraction_above_vmin(vmin, vmax, N, method="simpson", T=T_star, m=mH):
+    """
+    Compute integral_{vmin}^{vmax} f(v) dv using your integrator.
+    """
+    if method == "simpson":
+        return integrate_simpson(mb_speed_pdf, vmin, vmax, N, T=T, m=m)
+    elif method == "trap":
+        return integrate_trap(mb_speed_pdf, vmin, vmax, N, T=T, m=m)
+    else:
+        raise ValueError("method must be 'simpson' or 'trap'")
+
+#================= PROBLEM 1(B) =======================================
+def problem2b(prefix="problem2b", T=T_star, m=mH, N=20000, vmax_factor=12.0, method="simpson"):
+    """
+    (b) Fraction of atoms fast enough to excite n=1 -> n=2.
+    Integrate from vmin to 'infinity' approximated by vmax = vmax_factor * v_rms.
+    Saves: tables/problem2b_result.txt
+    """
+    vmin = v_min_excitation(m=m, dE=dE_12)
+    v_rms = np.sqrt(3.0 * kB * T / m)
+
+    vmax = vmax_factor * v_rms
+    frac = fraction_above_vmin(vmin, vmax, N, method=method, T=T, m=m)
+
+    outpath = f"tables/{prefix}_result.txt"
+    with open(outpath, "w") as f:
+        f.write("Problem 2(b): Fraction above excitation threshold\n")
+        f.write(f"T = {T:.1f} K\n")
+        f.write(f"DeltaE(n=1->2) = 10.2 eV\n")
+        f.write(f"v_min = {vmin:.6e} m/s ({vmin/1000:.3f} km/s)\n")
+        f.write(f"v_max = {vmax:.6e} m/s ({vmax/1000:.3f} km/s) = {vmax_factor} * v_rms\n")
+        f.write(f"Integrator = {method}, N = {N}\n")
+        f.write(f"Fraction ≈ {frac:.12e}\n")
+
+    print(f"[2(b)] Saved: {outpath}")
+    print(f"      v_min={vmin/1000:.3f} km/s, vmax={vmax/1000:.3f} km/s, frac≈{frac:.3e}")
+
+    return vmin, vmax, frac
+
+#================= PROBLEM 1(C) =======================================
+def problem2c(prefix="problem2c", T=T_star, m=mH,
+              N_list=(2000, 5000, 10000, 20000, 40000),
+              vmax_factors=(8, 10, 12, 14, 16),
+              method="simpson"):
+    """
+    (c) Precision / error bar for (b):
+        - convergence with step size (N)
+        - convergence with vmax (approaching infinity)
+
+    Saves:
+      - figures/problem2c_convergence_N.png
+      - figures/problem2c_convergence_vmax.png
+      - tables/problem2c_convergence_summary.txt
+    """
+    vmin = v_min_excitation(m=m, dE=dE_12)
+    v_rms = np.sqrt(3.0 * kB * T / m)
+
+    # --- (1) Convergence with N at a fixed vmax ---
+    vmax_fixed = max(vmax_factors) * v_rms
+    frac_N = []
+    for N in N_list:
+        frac_N.append(fraction_above_vmin(vmin, vmax_fixed, N, method=method, T=T, m=m))
+    frac_N = np.array(frac_N)
+
+    plt.figure()
+    plt.plot(N_list, frac_N, marker="o")
+    plt.xlabel("Number of steps N")
+    plt.ylabel("Fraction (v > v_min)")
+    plt.title(f"Problem 2(c): Convergence with Step Size (vmax={max(vmax_factors)} v_rms)")
+    plt.tight_layout()
+    plt.savefig(f"figures/{prefix}_convergence_N.png", dpi=200)
+    plt.close()
+
+    # Estimate error from last two N values
+    err_N = abs(frac_N[-1] - frac_N[-2])
+
+    # --- (2) Convergence with vmax at fixed N ---
+    N_fixed = max(N_list)
+    frac_vmax = []
+    vmax_vals = []
+    for fac in vmax_factors:
+        vmax = fac * v_rms
+        vmax_vals.append(vmax)
+        frac_vmax.append(fraction_above_vmin(vmin, vmax, N_fixed, method=method, T=T, m=m))
+    frac_vmax = np.array(frac_vmax)
+    vmax_vals = np.array(vmax_vals)
+
+    plt.figure()
+    plt.plot(vmax_factors, frac_vmax, marker="o")
+    plt.xlabel(r"$v_{\max}/v_{\mathrm{rms}}$")
+    plt.ylabel("Fraction (v > v_min)")
+    plt.title(f"Problem 2(c): Convergence with vmax (N={N_fixed})")
+    plt.tight_layout()
+    plt.savefig(f"figures/{prefix}_convergence_vmax.png", dpi=200)
+    plt.close()
+
+    # Estimate error from last two vmax values
+    err_vmax = abs(frac_vmax[-1] - frac_vmax[-2])
+
+    # Conservative total error estimate
+    err_total = np.sqrt(err_N**2 + err_vmax**2)
+
+    outpath = f"tables/{prefix}_convergence_summary.txt"
+    with open(outpath, "w") as f:
+        f.write("Problem 2(c): Precision estimate for fraction above excitation threshold\n")
+        f.write(f"T = {T:.1f} K\n")
+        f.write(f"v_min = {vmin:.6e} m/s ({vmin/1000:.3f} km/s)\n")
+        f.write(f"Integrator = {method}\n\n")
+
+        f.write("Convergence with N (vmax fixed):\n")
+        f.write(f"  vmax_fixed = {vmax_fixed:.6e} m/s = {max(vmax_factors)} * v_rms\n")
+        for N, val in zip(N_list, frac_N):
+            f.write(f"  N={N:6d}  frac={val:.12e}\n")
+        f.write(f"  Step-size convergence estimate (|last - prev|) ~ {err_N:.3e}\n\n")
+
+        f.write("Convergence with vmax (N fixed):\n")
+        f.write(f"  N_fixed = {N_fixed}\n")
+        for fac, val in zip(vmax_factors, frac_vmax):
+            f.write(f"  vmax={fac:>4} v_rms  frac={val:.12e}\n")
+        f.write(f"  vmax convergence estimate (|last - prev|) ~ {err_vmax:.3e}\n\n")
+
+        f.write(f"Final recommended value (using largest N and largest vmax):\n")
+        f.write(f"  frac ≈ {frac_vmax[-1]:.12e}\n")
+        f.write(f"  conservative error bar ≈ {err_total:.3e}\n")
+
+    print(f"[2(c)] Saved: figures/{prefix}_convergence_N.png, figures/{prefix}_convergence_vmax.png, {outpath}")
+    print(f"      Recommended frac≈{frac_vmax[-1]:.3e} ± {err_total:.1e}")
+
+    return frac_vmax[-1], err_total
 
 
 if __name__ == "__main__":
@@ -367,11 +584,29 @@ if __name__ == "__main__":
         problem1c(x_end=1.3, N_list=(25, 50, 100, 200, 400, 800))
 
     # ---- Problem 1(d) ----
-    run_part_d = True
+    run_part_d = False
     if run_part_d:
         problem1d(x_end=1.3, N_list=(25, 50, 100, 200, 400, 800, 1600, 3200))
 
-    # ---- Problem 1(e) ----
+    # ----- Problem 2(a) -----
+    run_2a = True
+    if run_2a:
+        problem2a()
+
+    # ----- Problem 2(b) -----
+    run_2b = True
+    if run_2b:
+        problem2b(N=20000, vmax_factor=12.0, method="simpson")
+
+    # ----- Problem 2(c) -----
+    run_2c = True
+    if run_2c:
+        problem2c()
+
+    
+
+        
+
 
 
 
