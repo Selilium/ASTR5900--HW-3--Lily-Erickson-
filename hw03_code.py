@@ -402,7 +402,7 @@ def v_min_excitation(m=mH, dE=dE_12):
     """
     return np.sqrt(2.0 * dE / m)
 
-#================= PROBLEM 1(A) =======================================
+#================= PROBLEM 2(A) =======================================
 def problem2a(prefix="problem2a", T=T_star, m=mH):
     """
     (a) Plot MB speed distribution for hydrogen at T=10,000 K.
@@ -446,7 +446,7 @@ def fraction_above_vmin(vmin, vmax, N, method="simpson", T=T_star, m=mH):
     else:
         raise ValueError("method must be 'simpson' or 'trap'")
 
-#================= PROBLEM 1(B) =======================================
+#================= PROBLEM 2(B) =======================================
 def problem2b(prefix="problem2b", T=T_star, m=mH, N=20000, vmax_factor=12.0, method="simpson"):
     """
     (b) Fraction of atoms fast enough to excite n=1 -> n=2.
@@ -474,7 +474,7 @@ def problem2b(prefix="problem2b", T=T_star, m=mH, N=20000, vmax_factor=12.0, met
 
     return vmin, vmax, frac
 
-#================= PROBLEM 1(C) =======================================
+#================= PROBLEM 2(C) =======================================
 def problem2c(prefix="problem2c", T=T_star, m=mH,
               N_list=(2000, 5000, 10000, 20000, 40000),
               vmax_factors=(8, 10, 12, 14, 16),
