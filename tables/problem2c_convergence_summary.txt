@@ -1,0 +1,26 @@
+Problem 2(c): Precision estimate for fraction above excitation threshold
+T = 10000.0 K
+v_min = 4.419264e+04 m/s (44.193 km/s)
+Integrator = simpson
+
+Convergence with N (vmax fixed):
+  vmax_fixed = 2.517108e+05 m/s = 16 * v_rms
+  N=  2000  frac=2.922793113819e-05
+  N=  5000  frac=2.922793020787e-05
+  N= 10000  frac=2.922793018496e-05
+  N= 20000  frac=2.922793018352e-05
+  N= 40000  frac=2.922793018343e-05
+  Step-size convergence estimate (|last - prev|) ~ 8.952e-17
+
+Convergence with vmax (N fixed):
+  N_fixed = 40000
+  vmax=   8 v_rms  frac=2.922793018343e-05
+  vmax=  10 v_rms  frac=2.922793018343e-05
+  vmax=  12 v_rms  frac=2.922793018343e-05
+  vmax=  14 v_rms  frac=2.922793018343e-05
+  vmax=  16 v_rms  frac=2.922793018343e-05
+  vmax convergence estimate (|last - prev|) ~ 2.877e-18
+
+Final recommended value (using largest N and largest vmax):
+  frac ≈ 2.922793018343e-05
+  conservative error bar ≈ 8.957e-17

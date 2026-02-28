@@ -1,0 +1,7 @@
+Problem 2(b): Fraction above excitation threshold
+T = 10000.0 K
+DeltaE(n=1->2) = 10.2 eV
+v_min = 4.419264e+04 m/s (44.193 km/s)
+v_max = 1.887831e+05 m/s (188.783 km/s) = 12.0 * v_rms
+Integrator = simpson, N = 20000
+Fraction ≈ 2.922793018345e-05
