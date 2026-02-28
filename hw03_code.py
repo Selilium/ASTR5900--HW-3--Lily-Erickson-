@@ -271,6 +271,75 @@ def problem1c(x0=0.0, y0=0.0, x_end=1.3,
 
 
 #================= PROBLEM 1(D) =======================================
+def problem1d(x0=0.0, y0=0.0, x_end=1.3,
+              N_list=(25, 50, 100, 200, 400, 800, 1600, 3200),
+              prefix="problem1d"):
+    """
+    Part (d): Convergence study WITHOUT using exact solution.
+    Use highest-resolution case (largest N, smallest h) as reference truth.
+    Plot fractional difference vs h on log-log scale for Euler and RK4.
+
+    Saves:
+      - <prefix>_fracdiff_vs_h.png
+      - <prefix>_fracdiff_table.txt
+    """
+
+    N_ref = max(N_list)
+    h_list = []
+    frac_E = []
+    frac_R = []
+
+    # Reference ("truth") solutions at x_end
+    _, yE_ref_arr = euler_method(f, x0, y0, x_end, N_ref)
+    _, yR_ref_arr = rk4_method(f, x0, y0, x_end, N_ref)
+    yE_ref = yE_ref_arr[-1]
+    yR_ref = yR_ref_arr[-1]
+
+    eps = 1e-15
+    lines = []
+    lines.append(f"Reference N_ref={N_ref}\n")
+    lines.append("N, h, yE(x_end), yE_ref, fracdiff_E, yRK4(x_end), yRK4_ref, fracdiff_RK4\n")
+
+    for N in N_list:
+        h = (x_end - x0) / N
+        xE, yE = euler_method(f, x0, y0, x_end, N)
+        xR, yR = rk4_method(f, x0, y0, x_end, N)
+
+        fdE = abs(yE[-1] - yE_ref) / (abs(yE_ref) + eps)
+        fdR = abs(yR[-1] - yR_ref) / (abs(yR_ref) + eps)
+
+        h_list.append(h)
+        frac_E.append(fdE)
+        frac_R.append(fdR)
+
+        lines.append(
+            f"{N}, {h:.8e}, {yE[-1]:.10f}, {yE_ref:.10f}, {fdE:.6e}, "
+            f"{yR[-1]:.10f}, {yR_ref:.10f}, {fdR:.6e}\n"
+        )
+
+    # Save table
+    table_path = f"{prefix}_fracdiff_table.txt"
+    with open(table_path, "w") as fout:
+        fout.writelines(lines)
+
+    # Plot fractional difference vs h on log-log scale
+    plt.figure()
+    plt.loglog(h_list, frac_E, marker="o", label="Euler fractional diff (vs N_ref)")
+    plt.loglog(h_list, frac_R, marker="o", label="RK4 fractional diff (vs N_ref)")
+    plt.gca().invert_xaxis()  # optional; keeps smaller h to the right
+    plt.xlabel("Step size h")
+    plt.ylabel(r"Fractional difference at $x_{\mathrm{end}}$")
+    plt.title("Problem 1(d): Convergence without exact solution")
+    plt.legend()
+    plt.tight_layout()
+    fig_path = f"{prefix}_fracdiff_vs_h.png"
+    plt.savefig(fig_path, dpi=200)
+    plt.close()
+
+    print(f"[1(d)] Saved: {fig_path} and {table_path}")
+    print(f"      Reference cases: Euler(N_ref={N_ref}), RK4(N_ref={N_ref})")
+
+    return np.array(h_list), np.array(frac_E), np.array(frac_R)
 
 
 
@@ -293,11 +362,15 @@ if __name__ == "__main__":
         problem1b(x_end=1.55, N=500, rel_thresh=0.01)
 
     # ----- Problem 1(c) -----
-    run_part_c = True
+    run_part_c = False
     if run_part_c:
         problem1c(x_end=1.3, N_list=(25, 50, 100, 200, 400, 800))
 
     # ---- Problem 1(d) ----
+    run_part_d = True
+    if run_part_d:
+        problem1d(x_end=1.3, N_list=(25, 50, 100, 200, 400, 800, 1600, 3200))
+
     # ---- Problem 1(e) ----
 
 

@@ -1,2 +1,10 @@
 .DS_Store
-figures/
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+*.log
+*.aux
+*.out
+*.toc
+
